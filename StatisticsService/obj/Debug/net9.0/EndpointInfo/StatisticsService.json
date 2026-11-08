@@ -1,0 +1,56 @@
+{
+  "openapi": "3.0.4",
+  "info": {
+    "title": "StatisticsService",
+    "version": "1.0"
+  },
+  "paths": {
+    "/api/statistics": {
+      "get": {
+        "tags": [
+          "Statistics"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatisticsDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatisticsDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatisticsDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "StatisticsDto": {
+        "type": "object",
+        "properties": {
+          "totalClients": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalClientTypes": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  }
+}

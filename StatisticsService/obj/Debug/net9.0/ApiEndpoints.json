@@ -1,0 +1,22 @@
+[
+  {
+    "ContainingType": "StatisticsService.Controllers.StatisticsController",
+    "Method": "GetStatistics",
+    "RelativePath": "api/statistics",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": [
+      {
+        "Type": "StatisticsService.DTOs.StatisticsDto",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  }
+]
