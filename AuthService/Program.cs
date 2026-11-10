@@ -205,20 +205,21 @@ allowedOrigins.AddRange(
         .GetSection("Cors:AllowedOrigins")
         .Get<string[]>() ?? Array.Empty<string>());
 
+const string AngularCorsPolicy = "AngularCorsPolicy";
+
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AngularClient", policy =>
+    options.AddPolicy(AngularCorsPolicy, policy =>
     {
         policy
             .WithOrigins(
-                allowedOrigins
-                    .Distinct(StringComparer.OrdinalIgnoreCase)
-                    .ToArray())
+                "http://localhost:4200",
+                "https://final-angular-ui.blackrock-2676f93e.northeurope.azurecontainerapps.io"
+            )
             .AllowAnyHeader()
             .AllowAnyMethod();
     });
 });
-
 // ============================================================
 // BUILD APPLICATION
 // ============================================================
@@ -322,4 +323,8 @@ app.MapGet("/health", () => Results.Ok(new
 // ============================================================
 
 app.MapControllers();
+app.UseHttpsRedirection();
+app.UseRouting();
+app.UseCors(AngularCorsPolicy);
+app.UseAuthentication();
 app.Run();
