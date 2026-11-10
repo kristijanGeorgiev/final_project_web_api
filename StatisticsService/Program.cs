@@ -91,7 +91,7 @@ app.UseSwagger();
 app.UseSwaggerUI();
 app.UseHttpsRedirection();
 app.UseRouting();
-app.UseCors("AngularPolicy");
+app.UseCors(AngularCorsPolicy);
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
