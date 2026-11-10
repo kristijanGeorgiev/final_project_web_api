@@ -9,7 +9,6 @@ namespace AuthService.Controllers;
 
 [ApiController]
 [Route("api/auth")]
-[Authorize]
 public class AuthController : ControllerBase
 {
     private readonly IAuthService _authService;

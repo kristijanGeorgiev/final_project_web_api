@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "ZJ3rUqL2nK0=",
+  "dgSpecHash": "9UsXifT1o30=",
   "success": true,
-  "projectFilePath": "C:\\Users\\Work\\Documents\\master\\Computing\\project\\CloudClientManagement\\backend\\ClientTypeService\\ClientTypeService.csproj",
+  "projectFilePath": "C:\\Users\\Work\\Documents\\master\\Computing\\project\\final_project_web_api\\ClientTypeService\\ClientTypeService.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\Work\\.nuget\\packages\\azure.core\\1.38.0\\azure.core.1.38.0.nupkg.sha512",
     "C:\\Users\\Work\\.nuget\\packages\\azure.identity\\1.11.4\\azure.identity.1.11.4.nupkg.sha512",
@@ -89,7 +89,11 @@
     "C:\\Users\\Work\\.nuget\\packages\\system.text.json\\9.0.9\\system.text.json.9.0.9.nupkg.sha512",
     "C:\\Users\\Work\\.nuget\\packages\\system.threading.channels\\7.0.0\\system.threading.channels.7.0.0.nupkg.sha512",
     "C:\\Users\\Work\\.nuget\\packages\\system.threading.tasks.extensions\\4.5.4\\system.threading.tasks.extensions.4.5.4.nupkg.sha512",
-    "C:\\Users\\Work\\.nuget\\packages\\system.windows.extensions\\6.0.0\\system.windows.extensions.6.0.0.nupkg.sha512"
+    "C:\\Users\\Work\\.nuget\\packages\\system.windows.extensions\\6.0.0\\system.windows.extensions.6.0.0.nupkg.sha512",
+    "C:\\Users\\Work\\.nuget\\packages\\microsoft.netcore.app.ref\\9.0.22\\microsoft.netcore.app.ref.9.0.22.nupkg.sha512",
+    "C:\\Users\\Work\\.nuget\\packages\\microsoft.windowsdesktop.app.ref\\9.0.22\\microsoft.windowsdesktop.app.ref.9.0.22.nupkg.sha512",
+    "C:\\Users\\Work\\.nuget\\packages\\microsoft.aspnetcore.app.ref\\9.0.22\\microsoft.aspnetcore.app.ref.9.0.22.nupkg.sha512",
+    "C:\\Users\\Work\\.nuget\\packages\\microsoft.netcore.app.host.win-x64\\9.0.22\\microsoft.netcore.app.host.win-x64.9.0.22.nupkg.sha512"
   ],
   "logs": []
 }
