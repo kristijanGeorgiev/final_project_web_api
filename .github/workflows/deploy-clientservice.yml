@@ -1,0 +1,70 @@
+
+name: Build and Deploy ClientService
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'ClientService/**'
+      - '.github/workflows/deploy-clientservice.yml'
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore ClientService
+        run: dotnet restore ClientService/ClientService.csproj
+
+      - name: Build ClientService
+        run: dotnet build ClientService/ClientService.csproj --configuration Release --no-restore
+
+      - name: Azure Login
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Login to Azure Container Registry
+        run: az acr login --name cloudlab319985
+
+      - name: Build and push Docker image
+        run: |
+          IMAGE="cloudlab319985.azurecr.io/client-service:${GITHUB_SHA}"
+          docker build -f ClientService/Dockerfile -t "$IMAGE" .
+          docker push "$IMAGE"
+
+      - name: Deploy to Azure Container Apps
+        run: |
+          az containerapp update \
+            --name final-client-service \
+            --resource-group rg-cloudcomputing-lab \
+            --image "cloudlab319985.azurecr.io/client-service:${GITHUB_SHA}"
+
+      - name: Verify deployed image
+        run: |
+          az containerapp show \
+            --name final-client-service \
+            --resource-group rg-cloudcomputing-lab \
+            --query "{State:properties.provisioningState,Running:properties.runningStatus,Image:properties.template.containers[0].image}" \
+            --output table
+
+      - name: Verify ClientService health
+        run: |
+          curl --fail --retry 5 --retry-delay 10 \
+            "https://final-client-service.blackrock-2676f93e.northeurope.azurecontainerapps.io/api/health"
