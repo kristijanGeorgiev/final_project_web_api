@@ -120,17 +120,9 @@ builder.Services.AddSwaggerGen(options =>
 
 var connectionString = builder.Configuration
     .GetConnectionString("DefaultConnection");
-
-if (string.IsNullOrWhiteSpace(connectionString))
-{
-    throw new InvalidOperationException(
-        "DefaultConnection is not configured.");
-}
-
 builder.Services.AddDbContext<AuthDbContext>(options =>
-{
-    options.UseSqlServer(connectionString);
-});
+    options.UseSqlServer(
+        builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // ============================================================
 // ASP.NET CORE IDENTITY
