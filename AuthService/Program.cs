@@ -1,3 +1,4 @@
+
 using System.Security.Claims;
 using System.Text;
 using AuthService.Data;
@@ -192,20 +193,25 @@ builder.Services.AddScoped<
 builder.Services.AddScoped<ITokenService, TokenService>();
 
 // ============================================================
-// CORS
+// CORS CONFIGURATION
 // ============================================================
+
+const string AngularCorsPolicy = "AngularCorsPolicy";
 
 var allowedOrigins = new List<string>
 {
-    "http://localhost:4200"
+    // Local Angular development
+    "http://localhost:4200",
+
+    // Azure Container Apps Angular frontend
+    "https://final-angular-ui.blackrock-2676f93e.northeurope.azurecontainerapps.io"
 };
 
+// Additional origins from appsettings.json or environment variables
 allowedOrigins.AddRange(
     builder.Configuration
         .GetSection("Cors:AllowedOrigins")
         .Get<string[]>() ?? Array.Empty<string>());
-
-const string AngularCorsPolicy = "AngularCorsPolicy";
 
 builder.Services.AddCors(options =>
 {
@@ -213,13 +219,16 @@ builder.Services.AddCors(options =>
     {
         policy
             .WithOrigins(
-                "http://localhost:4200",
-                "https://final-angular-ui.blackrock-2676f93e.northeurope.azurecontainerapps.io"
-            )
+                allowedOrigins
+                    .Where(origin => !string.IsNullOrWhiteSpace(origin))
+                    .Select(origin => origin.Trim().TrimEnd('/'))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToArray())
             .AllowAnyHeader()
             .AllowAnyMethod();
     });
 });
+
 // ============================================================
 // BUILD APPLICATION
 // ============================================================
@@ -234,8 +243,8 @@ using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
 
-    // Preserve the existing migration policy.
-    // Production migrations should be applied separately.
+    // Development migrations only.
+    // Production migrations must be applied separately.
     if (app.Environment.IsDevelopment())
     {
         var dbContext =
@@ -244,7 +253,7 @@ using (var scope = app.Services.CreateScope())
         await dbContext.Database.MigrateAsync();
     }
 
-    // Initialize existing Identity data and roles.
+    // Initialize Identity roles and optional administrator.
     await IdentitySeeder.SeedAsync(
         services,
         app.Configuration);
@@ -280,9 +289,11 @@ app.UseHttpsRedirection();
 
 app.UseRouting();
 
-app.UseCors("AngularClient");
+// CORS must run before authentication and authorization.
+app.UseCors(AngularCorsPolicy);
 
 app.UseAuthentication();
+
 app.UseAuthorization();
 
 // ============================================================
@@ -323,8 +334,5 @@ app.MapGet("/health", () => Results.Ok(new
 // ============================================================
 
 app.MapControllers();
-app.UseHttpsRedirection();
-app.UseRouting();
-app.UseCors(AngularCorsPolicy);
-app.UseAuthentication();
+
 app.Run();
