@@ -72,13 +72,19 @@ builder.Services.AddScoped<
 // CORS - Angular Frontend
 // --------------------------------------------------
 
+const string CorsPolicy = "AngularCorsPolicy";
+
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AngularPolicy", policy =>
+    options.AddPolicy(CorsPolicy, policy =>
     {
-        policy.WithOrigins("http://localhost:4200")
-              .AllowAnyHeader()
-              .AllowAnyMethod();
+        policy
+            .WithOrigins(
+                "http://localhost:4200",
+                "https://final-angular-ui.blackrock-2676f93e.northeurope.azurecontainerapps.io"
+            )
+            .AllowAnyHeader()
+            .AllowAnyMethod();
     });
 });
 
@@ -95,9 +101,10 @@ var app = builder.Build();
 app.UseSwagger();
 app.UseSwaggerUI();
 
-app.UseCors("AngularPolicy");
+app.UseCors(CorsPolicy);
 
 app.UseAuthorization();
+app.UseAuthentication();
 
 app.MapControllers();
 app.MapGet("/api/health", () =>
