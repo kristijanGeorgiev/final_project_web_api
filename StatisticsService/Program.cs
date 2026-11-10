@@ -56,26 +56,51 @@ builder.Services.AddScoped<
     StatisticsManagementService>();
 
 // Angular CORS
+const string AngularCorsPolicy = "AngularCorsPolicy";
+
+var allowedOrigins = new List<string>
+{
+    "http://localhost:4200",
+    "https://final-angular-ui.blackrock-2676f93e.northeurope.azurecontainerapps.io"
+};
+
+allowedOrigins.AddRange(
+    builder.Configuration
+        .GetSection("Cors:AllowedOrigins")
+        .Get<string[]>() ?? Array.Empty<string>());
+
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AngularPolicy", policy =>
+    options.AddPolicy(AngularCorsPolicy, policy =>
     {
-        policy.WithOrigins("http://localhost:4200")
-              .AllowAnyHeader()
-              .AllowAnyMethod();
+        policy
+            .WithOrigins(
+                allowedOrigins
+                    .Where(origin => !string.IsNullOrWhiteSpace(origin))
+                    .Select(origin => origin.Trim().TrimEnd('/'))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToArray())
+            .AllowAnyHeader()
+            .AllowAnyMethod();
     });
 });
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
-
+app.UseSwagger();
+app.UseSwaggerUI();
+app.UseHttpsRedirection();
+app.UseRouting();
 app.UseCors("AngularPolicy");
+app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
-
+app.MapGet("/api/health", () =>
+{
+    return Results.Ok(new
+    {
+        status = "Healthy",
+        service = "StatisticsService"
+    });
+});
 app.Run();
