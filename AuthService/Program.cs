@@ -321,9 +321,4 @@ app.MapGet("/health", () => Results.Ok(new
 // ============================================================
 
 app.MapControllers();
-
-<<<<<<< HEAD
 app.Run();
-=======
-app.Run();
->>>>>>> 2b22130 (Consolidate AuthService identity initialization)
