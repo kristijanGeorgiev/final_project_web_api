@@ -1,4 +1,3 @@
-
 using System.Security.Claims;
 using System.Text;
 using AuthService.Data;
@@ -14,17 +13,6 @@ using Microsoft.OpenApi.Models;
 var builder = WebApplication.CreateBuilder(args);
 
 // ============================================================
-// CONFIGURATION
-// ============================================================
-
-// WebApplication.CreateBuilder automatically loads:
-// - appsettings.json
-// - appsettings.{Environment}.json
-// - User Secrets in Development (when configured)
-// - Environment variables
-// - Command-line arguments
-
-// ============================================================
 // JWT CONFIGURATION
 // ============================================================
 
@@ -33,29 +21,20 @@ var jwtAudience = builder.Configuration["Jwt:Audience"];
 var jwtKey = builder.Configuration["Jwt:Key"];
 
 if (string.IsNullOrWhiteSpace(jwtIssuer))
-{
     throw new InvalidOperationException(
         "JWT issuer missing. Configure Jwt:Issuer.");
-}
 
 if (string.IsNullOrWhiteSpace(jwtAudience))
-{
     throw new InvalidOperationException(
         "JWT audience missing. Configure Jwt:Audience.");
-}
 
 if (string.IsNullOrWhiteSpace(jwtKey))
-{
     throw new InvalidOperationException(
-        "JWT signing key missing. Configure Jwt:Key " +
-        "using User Secrets or environment variables.");
-}
+        "JWT signing key missing. Configure Jwt:Key.");
 
 if (Encoding.UTF8.GetByteCount(jwtKey) < 32)
-{
     throw new InvalidOperationException(
         "JWT signing key must contain at least 32 UTF-8 bytes.");
-}
 
 var signingKey = new SymmetricSecurityKey(
     Encoding.UTF8.GetBytes(jwtKey));
@@ -67,7 +46,7 @@ var signingKey = new SymmetricSecurityKey(
 builder.Services.AddControllers();
 
 // ============================================================
-// SWAGGER + JWT AUTHORIZATION
+// SWAGGER + JWT
 // ============================================================
 
 builder.Services.AddEndpointsApiExplorer();
@@ -78,9 +57,7 @@ builder.Services.AddSwaggerGen(options =>
     {
         Title = "Cloud Client Management - AuthService API",
         Version = "v1",
-        Description =
-            "Authentication and authorization API using " +
-            "ASP.NET Core Identity and JWT Bearer tokens."
+        Description = "Authentication and authorization API."
     });
 
     options.AddSecurityDefinition(
@@ -92,9 +69,7 @@ builder.Services.AddSwaggerGen(options =>
             Scheme = "bearer",
             BearerFormat = "JWT",
             In = ParameterLocation.Header,
-            Description =
-                "Enter the JWT access token obtained from " +
-                "POST /api/auth/login."
+            Description = "Enter the JWT access token."
         });
 
     options.AddSecurityRequirement(
@@ -115,44 +90,41 @@ builder.Services.AddSwaggerGen(options =>
 });
 
 // ============================================================
-// SQL SERVER DATABASE
+// DATABASE
 // ============================================================
 
 var connectionString = builder.Configuration
     .GetConnectionString("DefaultConnection");
+
+if (string.IsNullOrWhiteSpace(connectionString))
+{
+    throw new InvalidOperationException(
+        "DefaultConnection is not configured.");
+}
+
 builder.Services.AddDbContext<AuthDbContext>(options =>
-    options.UseSqlServer(
-        builder.Configuration.GetConnectionString("DefaultConnection")));
+{
+    options.UseSqlServer(connectionString);
+});
 
 // ============================================================
-// ASP.NET CORE IDENTITY
+// IDENTITY
 // ============================================================
 
 builder.Services
     .AddIdentityCore<ApplicationUser>(options =>
     {
-        // Password requirements
-
         options.Password.RequiredLength = 12;
         options.Password.RequireDigit = true;
         options.Password.RequireLowercase = true;
         options.Password.RequireUppercase = true;
         options.Password.RequireNonAlphanumeric = true;
 
-        // User settings
-
         options.User.RequireUniqueEmail = true;
-
-        // Sign-in requirements
-
-        // This application does not currently implement
-        // email or phone confirmation workflows.
 
         options.SignIn.RequireConfirmedEmail = false;
         options.SignIn.RequireConfirmedPhoneNumber = false;
         options.SignIn.RequireConfirmedAccount = false;
-
-        // Account lockout
 
         options.Lockout.DefaultLockoutTimeSpan =
             TimeSpan.FromMinutes(15);
@@ -173,9 +145,6 @@ builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
-        // Preserve JWT claim names without inbound mapping.
-        // TokenService must emit matching claim types.
-
         options.MapInboundClaims = false;
 
         options.TokenValidationParameters =
@@ -194,9 +163,6 @@ builder.Services
                 IssuerSigningKey = signingKey,
 
                 ClockSkew = TimeSpan.FromSeconds(30),
-
-                // These must match the claims generated
-                // by TokenService.
 
                 NameClaimType = ClaimTypes.Name,
                 RoleClaimType = ClaimTypes.Role
@@ -223,20 +189,31 @@ builder.Services.AddScoped<
     IAuthService,
     global::AuthService.Services.AuthService>();
 
-builder.Services.AddScoped<
-    ITokenService,
-    TokenService>();
+builder.Services.AddScoped<ITokenService, TokenService>();
 
 // ============================================================
-// CORS - ANGULAR FRONTEND
+// CORS
 // ============================================================
+
+var allowedOrigins = new List<string>
+{
+    "http://localhost:4200"
+};
+
+allowedOrigins.AddRange(
+    builder.Configuration
+        .GetSection("Cors:AllowedOrigins")
+        .Get<string[]>() ?? Array.Empty<string>());
 
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AngularClient", policy =>
     {
         policy
-            .WithOrigins("http://localhost:4200")
+            .WithOrigins(
+                allowedOrigins
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToArray())
             .AllowAnyHeader()
             .AllowAnyMethod();
     });
@@ -254,33 +231,31 @@ var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
 {
-    // Apply pending migrations automatically
-    // in the Development environment only.
-    //
-    // Production migrations should be executed
-    // as a controlled deployment operation.
+    var services = scope.ServiceProvider;
 
+    // Preserve the existing migration policy.
+    // Production migrations should be applied separately.
     if (app.Environment.IsDevelopment())
     {
-        var dbContext = scope.ServiceProvider
-            .GetRequiredService<AuthDbContext>();
+        var dbContext =
+            services.GetRequiredService<AuthDbContext>();
 
         await dbContext.Database.MigrateAsync();
     }
 
-    // Ensure Admin/User roles exist and create
-    // the initial administrator if configured.
-    //
-    // Existing administrator passwords are
-    // intentionally not overwritten.
-
+    // Initialize existing Identity data and roles.
     await IdentitySeeder.SeedAsync(
-        scope.ServiceProvider,
+        services,
+        app.Configuration);
+
+    // Bootstrap the first administrator when configured.
+    await AdminSeeder.SeedAsync(
+        services,
         app.Configuration);
 }
 
 // ============================================================
-// SWAGGER MIDDLEWARE
+// SWAGGER
 // ============================================================
 
 if (app.Environment.IsDevelopment())
@@ -312,59 +287,45 @@ app.UseRouting();
 app.UseCors("AngularClient");
 
 app.UseAuthentication();
-
 app.UseAuthorization();
 
 // ============================================================
-// PUBLIC ROOT ENDPOINT
-// GET: /
+// ROOT ENDPOINT
 // ============================================================
 
-app.MapGet("/", () =>
+app.MapGet("/", () => Results.Ok(new
 {
-    return Results.Ok(new
+    service = "Cloud Client Management - AuthService",
+    status = "Running",
+    version = "1.0",
+    authentication = "JWT Bearer",
+    endpoints = new
     {
-        service = "Cloud Client Management - AuthService",
-        status = "Running",
-        version = "1.0",
-        authentication = "JWT Bearer",
-        swagger = "/swagger/index.html",
-        endpoints = new
-        {
-            login = "POST /api/auth/login",
-            register = "POST /api/auth/register",
-            currentUser = "GET /api/auth/me",
-            changePassword = "POST /api/auth/change-password",
-            health = "GET /health"
-        }
-    });
-})
+        login = "POST /api/auth/login",
+        register = "POST /api/auth/register",
+        currentUser = "GET /api/auth/me",
+        changePassword = "POST /api/auth/change-password",
+        health = "GET /health"
+    }
+}))
 .AllowAnonymous();
 
 // ============================================================
-// PUBLIC HEALTH CHECK
-// GET: /health
+// HEALTH CHECK
 // ============================================================
 
-app.MapGet("/health", () =>
+app.MapGet("/health", () => Results.Ok(new
 {
-    return Results.Ok(new
-    {
-        status = "Healthy",
-        service = "AuthService",
-        timestamp = DateTime.UtcNow
-    });
-})
+    status = "Healthy",
+    service = "AuthService",
+    timestamp = DateTime.UtcNow
+}))
 .AllowAnonymous();
 
 // ============================================================
-// API CONTROLLERS
+// CONTROLLERS
 // ============================================================
 
 app.MapControllers();
-
-// ============================================================
-// START APPLICATION
-// ============================================================
 
 app.Run();
