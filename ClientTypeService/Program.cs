@@ -92,16 +92,21 @@ var app = builder.Build();
 // HTTP Pipeline
 // --------------------------------------------------
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+app.UseSwagger();
+app.UseSwaggerUI();
 
 app.UseCors("AngularPolicy");
 
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapGet("/api/health", () =>
+{
+    return Results.Ok(new
+    {
+        status = "Healthy",
+        service = "ClientTypeService"
+    });
+});
 
 app.Run();

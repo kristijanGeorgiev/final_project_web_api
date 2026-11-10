@@ -1,0 +1,87 @@
+
+name: Build and Deploy ClientTypeService
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'ClientTypeService/**'
+      - '.github/workflows/deploy-clienttypeservice.yml'
+
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    env:
+      RESOURCE_GROUP: rg-cloudcomputing-lab
+      ACR_NAME: cloudlab319985
+      ACR_LOGIN_SERVER: cloudlab319985.azurecr.io
+      CONTAINER_APP: final-clienttype-service
+      IMAGE_NAME: clienttype-service
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 9
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore ClientTypeService
+        run: dotnet restore ClientTypeService/ClientTypeService.csproj
+
+      - name: Build ClientTypeService
+        run: |
+          dotnet build ClientTypeService/ClientTypeService.csproj \
+            --configuration Release \
+            --no-restore
+
+      - name: Azure Login
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Login to Azure Container Registry
+        run: az acr login --name $ACR_NAME
+
+      - name: Build Docker image
+        run: |
+          docker build \
+            -f ClientTypeService/Dockerfile \
+            -t $ACR_LOGIN_SERVER/$IMAGE_NAME:${GITHUB_SHA} \
+            .
+
+      - name: Push Docker image
+        run: |
+          docker push $ACR_LOGIN_SERVER/$IMAGE_NAME:${GITHUB_SHA}
+
+      - name: Deploy to Azure Container Apps
+        run: |
+          az containerapp update \
+            --name $CONTAINER_APP \
+            --resource-group $RESOURCE_GROUP \
+            --image $ACR_LOGIN_SERVER/$IMAGE_NAME:${GITHUB_SHA} \
+            --output none
+
+      - name: Verify deployment
+        run: |
+          az containerapp show \
+            --name $CONTAINER_APP \
+            --resource-group $RESOURCE_GROUP \
+            --query "{State:properties.provisioningState,Running:properties.runningStatus,Image:properties.template.containers[0].image}" \
+            --output table
+
+      - name: Verify health endpoint
+        run: |
+          curl --fail --retry 5 --retry-delay 10 \
+            "https://final-clienttype-service.blackrock-2676f93e.northeurope.azurecontainerapps.io/api/health"
