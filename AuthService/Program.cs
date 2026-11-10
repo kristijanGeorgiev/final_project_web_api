@@ -247,6 +247,7 @@ using (var scope = app.Services.CreateScope())
     await IdentitySeeder.SeedAsync(
         services,
         app.Configuration);
+}
 
 // ============================================================
 // SWAGGER
