@@ -248,12 +248,6 @@ using (var scope = app.Services.CreateScope())
         services,
         app.Configuration);
 
-    // Bootstrap the first administrator when configured.
-    await AdminSeeder.SeedAsync(
-        services,
-        app.Configuration);
-}
-
 // ============================================================
 // SWAGGER
 // ============================================================
